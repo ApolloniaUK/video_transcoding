@@ -16,7 +16,7 @@ Most of the tools in this package are essentially intelligent wrappers around Op
 Transcode video file or disc image directory into format and size similar to popular online downloads.
 
 * [`detect-crop`](#why-detect-crop)
-Detect optimal crop values for video file or disc image directory.
+Detect crop values for video file or disc image directory.
 
 * [`convert-video`](#why-convert-video)
 Convert video file from Matroska to MP4 format or from MP4 to Matroksa format without transcoding video.
@@ -117,17 +117,11 @@ But most of these default settings and automatic behaviors can be easily overrid
 
 ### Why `detect-crop`?
 
-Removing the black, non-content borders of a video during transcoding is not about making the edges of the output look pretty. Those edges are usually not visible anyway when viewed full screen.
-
-Cropping is about faster transcoding and higher quality. Fewer pixels to read and write almost always leads to a speed improvement. Fewer pixels also means the x264 encoder within HandBrake doesn't waste bitrate on non-content.
-
 HandBrake applies automatic crop detection by default. While it's usually correct, it does guess wrong often enough not to be trusted without review. For example, HandBrake's default behavior removes the top and bottom 140 pixels from "[The Dark Knight (2008)](http://www.blu-ray.com/movies/The-Dark-Knight-Blu-ray/743/)" and "[The Hunger Games: Catching Fire (2013)](http://www.blu-ray.com/movies/The-Hunger-Games-Catching-Fire-Blu-ray/67923/)," losing significant portions of their full-frame content.
-
-And sometimes HandBrake only crops a few pixels from one or more edges, which is too small of a difference in size to improve performance or quality.
 
 This is why `transcode-video` doesn't allow HandBrake to apply cropping by default.
 
-Instead, the `detect-crop` tool leverages both HandBrake and MPlayer, with additional measurements and constraints, to find the optimal video cropping bounds. It then indicates whether those two programs agree. To aid in review, this tool prints commands to the terminal console allowing the recommended (or disputed) crop to be displayed, as well as a sample command line for `transcode-video` itself.
+Instead, the `detect-crop` tool leverages both HandBrake and MPlayer to find the video cropping bounds. It then indicates whether those two programs agree. To aid in review, this tool prints commands to the terminal console allowing the recommended (or disputed) crop to be displayed, as well as a sample command line for `transcode-video` itself.
 
 ### Why `convert-video`?
 
@@ -201,7 +195,7 @@ The `.m4v` file extension is more "iTunes-friendly," but the file content itself
 
 #### Reducing output size
 
-If reducing output size is more important to you than quality, use the `--small` option:
+If reducing output size is more important to you than a possible loss in quality, use the `--small` option:
 
     transcode-video --small "/path/to/Movie.mkv"
 
@@ -233,7 +227,7 @@ The `--quick` option is also more than 15% speedier than the x264 video encoder'
 
 Be aware that output files are slightly larger when using the `--quick` option since the loss of precision is also a loss of efficiency.
 
-Performance also improves slightly using the `--small` option due to fewer calculations being made and fewer bits being written to disk.
+Performance also improves using the `--small` option due to fewer calculations being made and fewer bits being written to disk.
 
 #### Cropping
 
@@ -247,7 +241,7 @@ This command removes the left and right 240 pixels, typical of a 4:3 classic TV 
 
     transcode-video --crop 0:0:240:240 "/path/to/Movie.mkv"
 
-Use the `detect-crop` tool to determine the optimal cropping bounds.
+Use the `detect-crop` tool to determine the cropping bounds before transcoding.
 
 You can also call the `detect-crop` logic from `transcode-video` with the single `detect` argument:
 
@@ -343,7 +337,7 @@ Unlike `HandBrakeCLI`, external subtitle file names are allowed to contain comma
 
 ### Using `detect-crop`
 
-The command to find the optimal video cropping bounds is as simple as:
+The command to find the video cropping bounds is as simple as:
 
     detect-crop "/path/to/Movie.mkv"
 
@@ -377,8 +371,6 @@ If HandBrake and MPlayer disagree about the cropping values, then `detect-crop` 
 You'll then need to preview both and decide which to use.
 
 When input is a disc image directory instead of a single file, the `detect-crop` tool doesn't use MPlayer, nor does it print out commands to preview the crop.
-
-Be aware that the algorithm to determine optimal shape always crops from the top and bottom or from the left and right, never from both axes.
 
 ### Using `convert-video`
 
@@ -479,7 +471,7 @@ The `--preset` option in `transcode-video` controls the x264 video encoder, not 
 
     transcode-video --preset fast "/path/to/Movie.mkv"
 
-The x264 presets are supposed to trade encoding speed for compression efficiency, and their names attempt to reflect this. However, that's not quite how they always work.
+The x264 preset names (mostly) reflect their relative speed compared to the default, `medium`.
 
 Preset name | Note
 --- | --- | ---
@@ -489,14 +481,14 @@ Preset name | Note
 `faster` | use with caution
 `fast` | good but you might want to use `--quick` instead
 `medium` | default
-`slow` | smaller but not obviously higher quality
-`slower` | smaller but not obviously higher quality
-`veryslow` | smaller but not obviously higher quality
+`slow` | <!---->
+`slower` | <!---->
+`veryslow` | <!---->
 `placebo` | not recommended
 
-Presets faster than `medium` trade precision for more speed. That tradeoff is acceptable for the `fast` preset. But you may notice occasional quality loss problems when using the `faster` or `veryfast` presets.
+Presets faster than `medium` trade precision and compression efficiency for more speed. That tradeoff is acceptable for the `fast` preset. But you may notice occasional quality loss problems when using the `faster` or `veryfast` presets.
 
-Presets slower than `medium` trade encoding speed for more compression efficiency. Any quality improvement using these presets may not be perceptible for most input.
+Presets slower than `medium` trade encoding speed for more precision and compression efficiency. Any quality improvement using these presets may not be perceptible for most input.
 
 ### Recommended `transcode-video` usage
 
@@ -504,11 +496,11 @@ Use the default settings whenever possible.
 
 Use the `--mp4` or `--m4v` options if your target player can't handle Matroska format.
 
-Use the `--small` option if you're short on storage space.
+Use the `--small` option if you want more space savings.
 
 Use the `--quick` option if you're in a hurry.
 
-Apply unambiguous crop values from `detect-crop` after review.
+Use `detect-crop` before transcoding to manually review and apply the best crop values.
 
 Don't add audio tracks in their original format that aren't AAC or Dolby Digital AC-3.
 
@@ -603,9 +595,11 @@ Plus, I wouldn't use a GUI for these tasks. And it's a bad idea to develop softw
 
 [High Efficiency Video Coding](https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding) or H.265  is the likely successor to [H.264](https://en.wikipedia.org/wiki/H.264/MPEG-4_AVC), which is the format currently output by `transcode-video`. HandBrake has supported H.265 ever since it included the [x265 video encoder](http://x265.org/).
 
-While the x265 encoder can produce the same quality as the x264 encoder at a lower bitrate, it's considerably slower. So slow, in fact, as to not be practical for home transcoding.
+My ratecontrol system can't be applied with the current version of the x265 encoder in HandBrake because it doesn't allow access to `qpmax`, critical for maintaining quality in certain situations. I'll consider adding support once the [fix for `qpmax` support in x265](https://bitbucket.org/multicoreware/x265/issues/232/add-option-to-specify-qpmax) is available in an official HandBrake release.
 
-More importantly, my default ratecontrol system can't be applied with the x265 encoder. That's because x265 doesn't allow access to `qpmax`, critical for maintaining quality in certain situations. There's a [bug open on x265](https://bitbucket.org/multicoreware/x265/issues/232/add-option-to-specify-qpmax) about this now. When that's fixed, I'll consider adding support.
+But support also requires equivalent quality at a smaller size when using my rate control system. And performance is an issue. While speed continues to improve, the x265 encoder is still considerably slower than the current H.264 system.
+
+In the meantime, I recommend using the `--small` option to reduce output size. As a bonus, it's also faster.
 
 ### What about hardware-based video transcoding?
 
@@ -619,7 +613,7 @@ Also, keep in mind that hardware encoders are typically designed for realtime vi
 
 The original AC-3 format is limited to 5.1 audio channels. This means that any 7.1 channel audio track, typically available on Blu-ray Discs, needs to be downmixed during transcoding. The advantage to Enhanced AC-3 is that it can support up to 13.1 audio channels, so no downmixing is necessary.
 
-I'll consider adding support once Enhanced AC-3 is available in an official HandBrake release.
+Unfortunately, Enhanced AC-3 output is currently limited to 5.1 audio channels in HandBrake development builds. I'll consider adding support once an Enhanced AC-3 feature without that limitation is available in an official HandBrake release.
 
 ### How do you assess video transcoding quality?
 
@@ -633,13 +627,41 @@ What I don't use are [peak signal-to-noise ratios](https://en.wikipedia.org/wiki
 
 I use the default settings. That's why they're the defaults.
 
-Of course, I apply crop values as necessary. And I let `transcode-video` automatically burn any forced subtitles into the output video track when the "forced" flag is enabled in the original.
+But sometimes I use the `--small` option for more space savings.
+
+I never use the `--crop detect` function of `transcode-video` because I don't trust either `HandBrakeCLI` or `mplayer` to always get it right without supervision. Instead, I use the separate `detect-crop` tool before transcoding to manually review and apply the best crop values.
+
+I let `transcode-video` automatically burn any forced subtitles into the output video track when the "forced" flag is enabled in the original.
 
 I never include separate subtitle tracks, but I do add audio commentary tracks.
 
-For a few problematic videos, I have to apply options like `--force-rate 23.976 --filter detelecine`. But that's rare.
+For a few problematic videos, I have to apply options like `--force-rate 23.976 --filter detelecine`. For others, options like `--encoder-option zones=...` to adjust bitrate distribution. But both of these cases are rare.
 
 ## History
+
+### [0.11.1](https://github.com/donmelton/video_transcoding/releases/tag/0.11.1)
+
+Monday, September 26, 2016
+
+* Add `queue-import-file` and anything starting with `preset` to the list of unsupported `HandBrakeCLI` options.
+* Back out a change from version 0.3.1 to optimize setting the encoder level to behave more like past versions. This made no actual difference in the output video, only the `.log` file.
+* Update the "README" document to:
+    * Clarify tradeoffs when using the x264 preset system.
+    * Revise the status of H.265 and Enhanced AC-3 support.
+    * Tweak the description of how I use `transcode-video`. Again.
+
+### [0.11.0](https://github.com/donmelton/video_transcoding/releases/tag/0.11.0)
+
+Thursday, September 15, 2016
+
+* Change the behavior of `detect-crop` and the `--crop detect` function of `transcode-video` to no longer constrain the crop by default. Add a `--constrain` option to `detect-crop` and a `--constrain-crop` option to `transcode-video` to restore the old behavior. Also, deprecate the `--no-constrain` option of `detect-crop` and the `--no-constrain-crop` option of `transcode-video` since both are no longer necessary. Via [ #81](https://github.com/donmelton/video_transcoding/issues/81).
+* Update the "README" document to:
+    * Revise multiple sections about the changes to cropping behavior.
+    * Revise the description of the `--small` option in multiple sections.
+    * Revise how I use `transcode-video` in the "FAQ" section.
+* Add support for the `comb-detect`, `hqdn3d` and `pad` filters to `transcode-video`.
+* Fix a bug in `transcode-video` where the `--filter` option failed when `nlmeans-tune` was used as a argument. This was due to a regular expression only allowing lowercase alpha characters and not hyphens.
+* Update the default AC-3 audio and pass-through bitrates in the `--help` output of `transcode-video` to 640 Kbps, matching the behavior of the code since version 0.5.0.
 
 ### [0.10.0](https://github.com/donmelton/video_transcoding/releases/tag/0.10.0)
 

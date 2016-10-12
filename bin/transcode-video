@@ -67,10 +67,10 @@ Quality options:
 
 Video options:
     --crop T:B:L:R  set video crop values (default: 0:0:0:0)
-                      (use `--crop detect` for optimal crop values)
+                      (use `--crop detect` for `detect-crop` behavior)
                       (use `--crop auto` for `HandBrakeCLI` behavior)
-    --no-constrain-crop
-                    don't constrain `--crop detect` to optimal shape
+    --constrain-crop
+                    constrain `--crop detect` to optimal shape
     --fallback-crop handbrake|mplayer|none
                     select fallback crop values if `--crop detect` fails
     --720p          fit video within 1280x720 pixel bounds
@@ -121,9 +121,9 @@ Audio options:
                       with `stereo` to allow only single stereo track
                       (can be used multiple times)
     --ac3-bitrate 384|448|640
-                    set AC-3 audio bitrate (default: 384)
+                    set AC-3 audio bitrate (default: 640)
     --pass-ac3-bitrate 384|448|640
-                    set AC-3 audio pass-through bitrate (default: 448)
+                    set AC-3 audio pass-through bitrate (default: 640)
     --copy-audio TRACK|all
                     try to copy track selected by number in its original format
                       falling back to AC-3 format if original not allowed
@@ -225,7 +225,7 @@ HERE
       @vbv_maxrate_480p           = 2000
       @quick                      = false
       @crop                       = {:top => 0, :bottom => 0, :left => 0, :right => 0}
-      @constrain_crop             = true
+      @constrain_crop             = false
       @fallback_crop              = nil
       @target_bitrate             = nil
       @main_audio                 = nil
@@ -354,7 +354,12 @@ HERE
         end
       end
 
+      opts.on '--constrain-crop' do
+        @constrain_crop = true
+      end
+
       opts.on '--no-constrain-crop' do
+        Console.warn 'Using deprecated option: --no-constrain-crop'
         @constrain_crop = false
       end
 
@@ -449,10 +454,11 @@ HERE
       end
 
       opts.on '--filter ARG' do |arg|
-        if arg =~ /^([a-z]+)(?:=(.+))?$/
+        if arg =~ /^([a-z0-9-]+)(?:=(.+))?$/
           case $1
-          when 'deinterlace', 'decomb', 'detelecine', 'denoise', 'nlmeans',
-          'nlmeans-tune', 'deblock', 'rotate', 'grayscale'
+          when 'comb-detect', 'deinterlace', 'decomb', 'detelecine',
+          'hqdn3d', 'denoise', 'nlmeans', 'nlmeans-tune', 'deblock',
+          'rotate', 'pad', 'grayscale'
             force_handbrake_option $1, $2
           else
             fail UsageError, "unsupported filter name: #{$1}"
@@ -726,8 +732,8 @@ HERE
 
     def filter_handbrake_option(name)
       case name
-      when 'help', 'update', 'preset', 'preset-list', 'input', 'title',
-      'scan', 'main-feature', 'previews', 'output', 'format',
+      when 'help', 'update', /^preset/, 'queue-import-file', 'input',
+      'title', 'scan', 'main-feature', 'previews', 'output', 'format',
       'encoder-preset-list', 'encoder-tune-list', 'encoder-profile-list',
       'encoder-level-list'
         fail UsageError, "unsupported HandBrakeCLI option name: #{name}"
@@ -867,14 +873,7 @@ HERE
         vbv_maxrate = @vbv_maxrate_480p
       end
 
-      preset = @handbrake_options.fetch('encoder-preset', 'medium')
-
       if @abr_bitrate.nil? and @vbr_quality.nil?
-        case preset
-        when 'ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium'
-          handbrake_options['encoder-level'] = 'auto'
-        end
-
         handbrake_options['quality'] = '1'
 
         if @target_bitrate.nil?
@@ -914,7 +913,7 @@ HERE
         handbrake_options['quality'] = @vbr_quality.to_s.gsub(/\.0+$/, '') unless @vbr_quality.nil?
       end
 
-      if @quick and preset == 'medium'
+      if @quick and @handbrake_options.fetch('encoder-preset', 'medium') == 'medium'
         encoder_options['ref']          = '1'
         encoder_options['weightp']      = '1'
         encoder_options['subme']        = '6'
